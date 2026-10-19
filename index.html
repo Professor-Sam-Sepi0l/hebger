@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="database.js"></script>
+    <meta charset="UTF-8">
+    <title>Hebrew Semantic OS v15.4 - Filter & Deconstruct</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { margin: 0; background-color: #0a0a0c; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #boot-screen, #round-modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10,10,12,0.95); display: flex; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.5s; flex-direction: column; gap: 20px; }
+        #round-modal { display: none; z-index: 90; }
+        .modal-box { background: #1a1a1e; padding: 40px; border-radius: 12px; border: 1px solid #333; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .btn { padding: 15px 30px; font-size: 16px; background: transparent; color: #f59e0b; border: 2px solid #f59e0b; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: bold;}
+        .btn:hover { background: #f59e0b; color: #fff; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+        .btn-action { color: #10b981; border-color: #10b981; }
+        .btn-action:hover { background: #10b981; color: #fff; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        .btn-danger { color: #e22828; border-color: #e22828; }
+        .btn-danger:hover { background: #e22828; color: #fff; box-shadow: 0 0 15px rgba(226, 40, 40, 0.4); }
+        select.boot-select { padding: 15px 20px; font-size: 18px; background: #1a1a1e; color: #fff; border: 2px solid #555; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 20px; outline: none; }
+        select.boot-select:focus { border-color: #f59e0b; }
+        #top-controls { position: absolute; top: 15px; left: 15px; z-index: 20; display: none; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; border: 1px solid #333; backdrop-filter: blur(5px);}
+        .slider-group { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #aaa; gap: 10px; width: 150px; font-weight: bold;}
+        input[type="range"] { cursor: pointer; width: 100%; height: 4px; -webkit-appearance: none; background: #444; border-radius: 2px;}
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #f59e0b; border-radius: 50%; }
+        .mini-btn { padding: 8px 10px; font-size: 11px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 5px; font-weight: bold; transition: 0.2s;}
+        .mini-btn:hover { background: #444; }
+        #clock-display { position: absolute; top: 15px; right: 100px; font-size: 18px; font-weight: bold; color: #10b981; z-index: 10; letter-spacing: 2px; font-family: monospace; display: none; }
+        #round-indicator { position: absolute; top: 15px; right: 20px; font-size: 18px; font-weight: bold; color: #555; z-index: 10; letter-spacing: 2px; }
+        #info-panel { position: absolute; top: 60px; right: 20px; width: 300px; background: rgba(20,20,24,0.95); border: 1px solid #444; padding: 20px; border-radius: 8px; display: none; z-index: 50; border-left: 4px solid #f59e0b; box-shadow: 0 5px 20px rgba(0,0,0,0.5);}
+        #info-panel h3 { margin: 0 0 10px 0; font-size: 24px; color: #fff; }
+        #info-panel p { margin: 0; font-size: 14px; color: #bbb; line-height: 1.6; }
+	#info-panel h3 { margin: 0 0 10px 0; font-size: 24px; color: #fff; display: inline-block; }
+        #play-audio-btn { cursor: pointer; display: none; margin-left: 15px; font-size: 20px; transition: transform 0.2s; vertical-align: top; }
+        #play-audio-btn:hover { transform: scale(1.2); }
+        #close-info { position: absolute; top: 15px; right: 15px; cursor: pointer; color: #888; font-size: 16px;}
+        .slider-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; }
+        .slider-container label { display: block; font-size: 12px; color: #888; margin-bottom: 8px; font-weight: bold; letter-spacing: 1px; }
+        #ui-panel { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); text-align: center; background: rgba(15,15,18,0.9); padding: 20px 30px; border-radius: 12px; border: 1px solid #333; z-index: 10; display: none; width: 620px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(10px);}
+        .input-group { display: flex; justify-content: center; align-items: center; margin-top: 10px; gap: 8px; }
+        input[type="text"], select.ui-select { padding: 12px; font-size: 18px; border-radius: 6px; border: 2px solid #444; background: #1a1a1e; color: #fff; width: 55%; text-align: center; font-weight: bold; outline: none; }
+        input[type="text"]:focus { border-color: #f59e0b; }
+        select.ui-select { display: none; text-align: left; width: 75%; font-size: 16px; font-weight: normal;}
+        select.ui-select:focus { border-color: #f59e0b; }
+        button.action-btn { padding: 12px 20px; font-size: 16px; cursor: pointer; border-radius: 6px; border: none; background: #f59e0b; color: #111; font-weight: bold; transition: background 0.2s; }
+        button.action-btn:hover { background: #d97706; }
+        button.reveal-btn { padding: 12px 15px; font-size: 14px; cursor: pointer; border-radius: 6px; border: 1px solid #555; background: #2a2a2a; color: #ccc; font-weight: bold; transition: all 0.2s; display: none; }
+        button.reveal-btn:hover { background: #444; color: #fff; border-color: #888; }
+        .toggle-container { margin-top: 15px; font-size: 13px; color: #888; display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap;}
+        .toggle-item { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+        .flying-letter { font-size: 26px; font-weight: bold; fill: #ffffff; pointer-events: none; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        .blinking-prompt { margin-top: 30px; font-size: 14px; font-weight: bold; color: #fff; animation: pulse 1.5s infinite; letter-spacing: 2px; }
+        .error { border: 2px solid #e22828 !important; }
+        .success { border: 2px solid #00ff00 !important; }
+        
+        /* KINETIC ASSEMBLY SCREEN */
+        .flash-screen { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.9); background: rgba(15, 15, 18, 0.98); border-radius: 16px; border: 1px solid #444; padding: 40px; text-align: center; z-index: 1000; opacity: 0; pointer-events: none; transition: all 0.3s; box-shadow: 0 0 50px rgba(0,0,0,0.9); width: 500px;}
+        .flash-screen.active { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: all; }
+        #flash-hebrew { font-size: 80px; margin: 0; color: #fff; letter-spacing: 5px; font-weight: bold; }
+        #flash-translit { font-size: 38px; margin: 15px 0; color: #888; }
+        .kinetic-stage { position: relative; height: 120px; margin: 20px 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .template-container { display: flex; font-size: 40px; font-weight: bold; z-index: 2; align-items: baseline; justify-content: center; width: 100%; font-family: monospace;}
+        .root-container { position: absolute; top: 70px; display: flex; gap: 40px; font-size: 40px; font-weight: bold; color: #f59e0b; z-index: 3; width: 100%; justify-content: center; }
+        .affix-char { color: #555; text-align: center; display: inline-block; width: 36px; margin: 0 2px;}
+        .target-blank { color: #555; text-align: center; display: inline-block; width: 36px; margin: 0 2px; transition: color 0.3s; }
+        .floating-root { transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s; display: inline-block; width: 36px; text-align: center; font-family: monospace;}
+        
+        /* SYNTAX BUILDER PANEL */
+        #syntax-panel { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(20,20,24,0.95); border-radius: 8px; border: 1px solid #10b981; padding: 20px; z-index: 60; display: none; width: 600px; text-align: center; box-shadow: 0 5px 30px rgba(0,0,0,0.5);}
+        #word-pool { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        .word-chip { background: #333; border: 1px solid #555; padding: 6px 14px; cursor: pointer; border-radius: 6px; font-size: 14px; transition: all 0.2s;}
+        .word-chip:hover { border-color: #10b981; background: #1a1a1e; color: #fff;}
+        #staging-area { min-height: 50px; border: 2px dashed #444; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3);}
+        
+        /* MASTERGRAPH OVERLAY */
+        #mastergraph-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10,10,12,0.98); z-index: 300; display: none; overflow: hidden; }
+        #mastergraph-title { position: absolute; top: 20px; left: 20px; color: #a855f7; font-size: 24px; font-weight: bold; letter-spacing: 2px; z-index: 310; pointer-events: none;}
+        
+        /* CHEAT SHEET OVERLAY */
+        #cheat-sheet-overlay { display:none; position:absolute; top:40%; left:50%; transform:translate(-50%, -50%); background:rgba(15,15,18,0.98); border: 2px solid #a855f7; padding: 30px; z-index: 500; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.9); text-align: center; min-width: 600px; max-width: 800px; backdrop-filter: blur(10px); }
+        .cheat-sheet-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+        .cs-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 20px; }
+        .cs-node { padding: 8px 16px; border-radius: 20px; border: 2px solid; background: #1a1a1e; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s; color: #fff; }
+        .cs-node:hover { transform: scale(1.05); box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .cs-node.disabled { opacity: 0.3; border-color: #444 !important; }
+        #cs-details { background: rgba(0,0,0,0.5); padding: 20px; border-radius: 8px; text-align: left; min-height: 120px; border-left: 4px solid #444; }
+    </style>
+</head>
+<body>
+
+    <div id="boot-screen">
+        <h1 style="color:#f59e0b; letter-spacing: 2px; margin-bottom: 5px;">Hebrew Semantic Engine</h1>
+        <p style="color:#888; margin-top: 0; margin-bottom: 10px;">v15.4 // Filter & Deconstruct</p>
+        <p style="color:#666; margin-bottom: 30px; font-size: 13px;">Press <strong style="color:#a855f7;">TAB</strong> to view Master Lexicon Network</p>
+        <select id="mode-select" class="boot-select">
+            <option value="ALL">Mode: Global Random</option>
+            <option value="Investigation">Hashoter Hatov: Investigation</option>
+            <option value="Crime">Hashoter Hatov: Crime</option>
+            <option value="Retail">Kupa Rashit: Retail & Checkout</option>
+            <option value="Management">Kupa Rashit: Management</option>
+        </select>
+        <button id="boot-btn" class="btn">Initialize Engine</button>
+        <button id="clear-data-btn" class="btn btn-danger" style="font-size: 12px; padding: 10px; margin-top: 50px;">Clear Save Data</button>
+    </div>
+
+    <div id="mastergraph-overlay">
+        <div id="mastergraph-title">MASTER LEXICON NETWORK [ Tab to Close ]</div>
+        <svg id="mastergraph-board" width="100%" height="100%"></svg>
+    </div>
+
+    <div id="assembly-flash" class="flash-screen">
+        <h3 style="color:#888; font-size: 14px; margin-top: 0; letter-spacing: 3px;">SYSTEM COMPILATION</h3>
+        <div class="kinetic-stage" id="kinetic-stage"></div>
+        <div style="margin-top:20px; color:#aaa; font-size: 16px;" id="assem-rule">Rule</div>
+        <div class="blinking-prompt" id="assembly-prompt">PRESS SPACE TO ASSEMBLE</div>
+    </div>
+
+    <div id="word-flash" class="flash-screen">
+        <h1 id="flash-hebrew"></h1>
+        <h2 id="flash-translit"></h2>
+        <p id="flash-def" style="color:#aaa; font-size: 24px; font-style: italic; margin: 0;"></p>
+        <div class="blinking-prompt">PRESS SPACE TO DEPLOY</div>
+    </div>
+
+    <div id="syntax-panel">
+        <h3 id="syntax-title" style="color:#10b981; margin-top:0; font-size: 18px;">SENTENCE BUILDER</h3>
+        <p id="syntax-desc" style="color:#888; font-size: 13px;">String nodes together to clear them from the network.</p>
+        <div id="word-pool"></div>
+        <div id="staging-area"></div>
+        <button id="btn-execute-strike" class="btn btn-action" style="width: 100%; display:none;">BUILD & CLEAR SENTENCE</button>
+        <button id="btn-close-syntax" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #888; cursor: pointer; font-size: 16px;">✖</button>
+    </div>
+
+    <div id="round-modal">
+        <div class="modal-box">
+            <h2 id="modal-title" style="color:#f59e0b;">Phase Complete</h2>
+            <p style="color:#888; font-size:14px; margin-bottom: 20px;">(Press Space to view Master Archive)</p>
+            <div id="modal-actions-half1" style="display:none;"><button id="modal-cont-half2-btn" class="btn">Continue to Phase 2</button></div>
+            <div id="modal-actions-half2" style="display:none;"><button id="modal-next-round-btn" class="btn">Start Next Round</button></div>
+        </div>
+    </div>
+
+    <div id="top-controls">
+        <div class="slider-group"><label>MUSIC</label><input type="range" id="fx-vol" min="0" max="1" step="0.05" value="0.3"></div>
+        <button id="btn-mute-music" class="mini-btn" style="margin-top: 0; margin-bottom: 5px;">Mute Music</button>
+        <div class="slider-group"><label>SFX</label><input type="range" id="sfx-vol" min="0" max="1" step="0.05" value="0.8"></div>
+        <div class="slider-group" style="margin-top: 10px;"><label>TENSION</label><input type="range" id="tension-slider" min="0.1" max="3.0" step="0.1" value="1.0"></div>
+        <div class="slider-group"><label>REPULSION</label><input type="range" id="repulsion-slider" min="0.1" max="4.0" step="0.1" value="1.0"></div>
+        <button id="btn-open-syntax" class="mini-btn" style="background:#10b981; border-color:#10b981; margin-top: 10px;">Sentence Builder</button>
+    </div>
+    
+    <div id="clock-display">00:00</div>
+    <div id="round-indicator">R_1.1</div>
+
+    <div id="info-panel">
+        <span id="close-info">✖</span>
+        <h3 id="info-title" style="margin-bottom: 2px;">Root</h3>
+	<span id="play-audio-btn" title="Listen to pronounciation">🔊</span>      
+	<span id="info-subtitle" style="color:#f59e0b; font-weight:bold; font-size:12px; display:block; margin-bottom:10px;"></span>
+        <p id="info-desc">Definition goes here.</p>
+        <div class="slider-container">
+            <label>UI SCALE MULTIPLIER</label>
+            <input type="range" id="node-size-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <div id="ui-panel">
+        <h2 id="prompt-text" style="margin-top: 0; font-size: 18px; color: #ddd; line-height: 1.4;">Loading...</h2>
+        <div class="input-group">
+            <input type="text" id="answer-input" placeholder="Type transliteration or עברית..." dir="auto" autocomplete="off">
+            <select id="def-select" class="ui-select">
+                <option value="">Select Structural Logic...</option>
+                <option value="Default Execution">Default Execution</option>
+                <option value="System Result">System Result</option>
+                <option value="Action Process">Action Process</option>
+                <option value="Passive Action Process">Passive Action Process</option>
+                <option value="System Override">System Override</option>
+                <option value="Override Result">Override Result</option>
+                <option value="Feedback Loop">Feedback Loop</option>
+                <option value="Physical Tool">Physical Tool</option>
+                <option value="Process Name">Process Name</option>
+                <option value="Organized System">Organized System</option>
+                <option value="Character/Profession">Character/Profession</option>
+                <option value="Abstract Concept">Abstract Concept</option>
+                <option value="Location Base">Location Base</option>
+                <option value="Action Processing Result">Action Processing Result</option>
+                <option value="Tool / Instrument">Tool / Instrument</option>
+            </select>
+            <button id="submit-btn" class="action-btn" style="margin:0;">Compile</button>
+            <button id="reveal-btn" class="reveal-btn">Reveal</button>
+        </div>
+        <div class="toggle-container">
+            <label class="toggle-item"><input type="checkbox" id="def-drill-toggle"> Pattern Logic Drill</label>
+            <label class="toggle-item"><input type="checkbox" id="trans-drill-toggle" checked> Trans Drill</label>
+            <label class="toggle-item"><input type="checkbox" id="assembly-toggle" checked> Kinetic Assembly</label>
+            <label class="toggle-item"><input type="checkbox" id="voice-toggle" checked> Hebrew Voice</label>
+            <label class="toggle-item"><input type="checkbox" id="deconstruct-toggle"> <span style="color:#a855f7; font-weight:bold;">Deconstruct Mode</span></label>
+        </div>
+        <p style="margin-bottom: 0; font-size: 14px; color: #666; margin-top: 15px;">Nodes: <span id="progress-text">0</span> / <span id="total-text">16</span></p>
+    </div>
+
+    <div id="cheat-sheet-overlay">
+        <div class="cheat-sheet-header">
+            <h3 style="color:#a855f7; margin:0; letter-spacing: 2px;">MASTER PATTERN NETWORK</h3>
+            <div>
+                <span style="color:#888; font-size:12px; margin-right:10px;">MODE:</span>
+                <select id="cs-mode-select" style="background:#1a1a1e; color:#fff; border:1px solid #555; padding:5px; border-radius:4px; outline:none; font-weight:bold;">
+                    <option value="SCAN">Data Scan</option>
+                    <option value="FILTER">Matrix Filter</option>
+                </select>
+            </div>
+        </div>
+        
+        <div style="text-align: left; margin-bottom: 5px; color: #888; font-size: 12px; font-weight: bold;">VERB DRIVERS (BINYANIM)</div>
+        <div id="cs-binyanim" class="cs-grid"></div>
+
+        <div style="text-align: left; margin-bottom: 5px; color: #888; font-size: 12px; font-weight: bold;">NOUN WEIGHTS (MISHKALIM)</div>
+        <div id="cs-mishkalim" class="cs-grid"></div>
+
+        <div id="cs-details">
+            <h3 style="margin-top:0; color:#888;">Select a node to scan pattern data...</h3>
+        </div>
+
+        <p style="color:#666; font-size:12px; margin-top: 20px; font-weight: bold; text-align: center;">[ Press SPACE to close ]</p>
+    </div>
+
+    <svg id="game-board" width="100vw" height="100vh"></svg>
+
+    <script>
+        // --- 0. UTILS ---
+        function stripNiqqud(text) { return text.replace(/[\u0591-\u05C7]/g, ''); }
+        
+        // --- 1. EXTERNAL DATABASE SECTION ---
+        // Buckets for pulling vars from external js database
+      // --- 1. EXTERNAL DATABASE SECTION ---
+        // Buckets for pulling vars from external js database
+        let vocabData = [];
+        
+        // Fix 1: Properly structure rootDictionary so the visualizer doesn't crash
+        let rootDictionary = { triRoots: {} };
+        
+        // --- DICTIONARY ---
+        // Dictionary for categorising words via triggerWords
+        const semanticTopics = {
+            "Combat & Threat": ["kill", "blood", "gun", "war", "strike", "fear", "attack", "guard"],
+            "Commerce & Retail": ["buy", "sell", "pay", "cost", "money", "shop", "store"],
+            "Biology & Nature": ["tree", "animal", "water", "sea", "bird", "body", "medical"],
+        };
+       
+        function assignCategory(def) {     
+            let cleanDef = def.toLowerCase();
+           
+           for (let categoryName in semanticTopics){
+            // grabs array of trigger words for current category
+            let triggerWords = semanticTopics[categoryName];
+            // Ask JS: Does cleanDef include ANY trigger word? (return's T OR F)
+            let triggerFound = triggerWords.some(word => cleanDef.includes(word));
+            // If true, kill's function and return's category name
+            if (triggerFound) {
+                return categoryName;
+
+            }
+          }
+          // Fallback if loop finishes without finding any matches
+          return "uncategorised"; 
+        }
+        // --- THE MIDDLEWARE TRANSLATOR ---
+        function translatePattern(rawPattern) {
+            let p = rawPattern.toLowerCase();
+        
+            // Fix 2: Capitalize the returns to strictly match your patternColors keys
+            if (p.includes("pa'al")) return "Katav";
+            if (p.includes("pi'el")) return "Kitev";
+            if (p.includes("pu'al")) return "Kutav";
+            if (p.includes("hitpa'el")) return "Hitkatev";
+            if (p.includes("hif'il")) return "Hichtiv";
+            if (p.includes("huf'al")) return "Huchtav";
+            if (p.includes("nif'al")) return "Nichtav";
+        
+            // Nouns (Mapping Mishkalim to your Mnemonics)
+            if (p.includes("ktila")) return "Kteevah";
+            if (p.includes("miktal") || p.includes("maktel")) return "Miktav";
+            if (p.includes("kattal") || p.includes("katal")) return "Katvan";
+        
+             // Generic fallback for standard nouns
+            return "Pele"; 
+        }
+
+        // Fix 3: Generate the structural logic strings needed for the drop-down UI
+        function getPatternMeaning(gamePattern) {
+            switch(gamePattern) {
+                case "Katav": return "Default Execution";
+                case "Nichtav": return "System Result";
+                case "Kitev": return "Action Process";
+                case "Kutav": return "Passive Action Process";
+                case "Hichtiv": return "System Override";
+                case "Huchtav": return "Override Result";
+                case "Hitkatev": return "Feedback Loop";
+                case "Kteevah": return "Process Name";
+                case "Miktav": return "Physical Tool";
+                case "Katvan": return "Character/Profession";
+                default: return "Abstract Concept";
+            }
+        }
+
+        // 2. Run the Adapter to pour and format the data
+        for (let root in hebrewDatabase) {
+            let engDef = hebrewDatabase[root].definition;            
+            // Fill the Dictionary properly
+            rootDictionary.triRoots[root] = {
+                hebrew: root,
+                definition: engDef
+            };
+
+            // Fill the Gameplay Array
+            let conjugatedWords = hebrewDatabase[root].words;
+
+            for (let rawPattern in conjugatedWords) {
+                let hebWord = conjugatedWords[rawPattern];
+                let gamePattern = translatePattern(rawPattern);
+                let pMeaning = getPatternMeaning(gamePattern);
+
+                // 1. call new function to assign category
+                let dynamicCategory = assignCategory(engDef);
+                // 2. push it into the game's memory
+                vocabData.push({
+                    root: root,
+                    targetHebrew: hebWord,             
+                    targetWord: hebWord,               
+                    targetTranslation: engDef,         
+                    basePattern: gamePattern,          
+                    patternMeaning: pMeaning, 
+                    rawGrammar: rawPattern,
+                    categoryId: dynamicCategory          
+                });
+            }
+        }
+        console.log(`Middleware Complete: Loaded ${vocabData.length} playable words into memory.`);
+
+        vocabData.forEach((v, i) => { if(!v.id) v.id = `v_${i}`; });
+
+        // --- UI & DATA INIT ---
+        const inputField = document.getElementById("answer-input"), defSelect = document.getElementById("def-select"), submitBtn = document.getElementById("submit-btn"), revealBtn = document.getElementById("reveal-btn"), closeInfoBtn = document.getElementById("close-info");
+        let selectedCategory = "ALL", overlayActive = false, gameTimeSeconds = 0, clockInterval = null;
+        let masterLexicon = JSON.parse(localStorage.getItem('hebrewSemanticOS_Lexicon')) || [];
+        let savedProgress = JSON.parse(localStorage.getItem('hebrewSemanticOS_Progress')) || { round: 1, half: 1 };
+        let currentRoundNum = savedProgress.round, currentHalf = savedProgress.half;
+
+        function saveProgress() { localStorage.setItem('hebrewSemanticOS_Progress', JSON.stringify({ round: currentRoundNum, half: currentHalf })); }
+
+        const clearDataBtn = document.getElementById("clear-data-btn");
+        if(clearDataBtn) clearDataBtn.addEventListener("click", () => { if(confirm("Purge all saved network data and level progress?")) { localStorage.removeItem('hebrewSemanticOS_Lexicon'); localStorage.removeItem('hebrewSemanticOS_Progress'); masterLexicon = []; currentRoundNum = 1; currentHalf = 1; location.reload(); } });
+        if(closeInfoBtn) closeInfoBtn.addEventListener("click", () => { document.getElementById("info-panel").style.display = "none"; });
+
+        const patternColors = { 'Katav':'#facc15', 'Nichtav':'#22d3ee', 'Kitev':'#ec4899', 'Kutav':'#f97316', 'Hichtiv':'#39ff14', 'Huchtav':'#bef264', 'Hitkatev':'#a855f7', 'Miktevet':'#eab308', 'Machtev':'#ca8a04', 'Kitavon':'#ec4899', 'Kteevah':'#22d3ee', 'Katvan':'#bef264', 'Kteevut':'#a855f7', 'Miktav':'#ec4899', 'Michtav':'#39ff14', 'Pele':'#ffffff' };
+        const categoryColors = { "Investigation":"#a855f7", "Crime":"#ef4444", "Action":"#10b981", "Communication":"#f59e0b", "Retail":"#22d3ee", "Management":"#ec4899" };
+        const affixData = { 'Katav': { structure: '_ o _ e _' }, 'Nichtav': { structure: 'n i _ _ a _' }, 'Kitev': { structure: 'm \' _ a _ e _' }, 'Kutav': { structure: 'm \' _ u _ a _' }, 'Hichtiv': { structure: 'm a _ _ i _' }, 'Huchtav': { structure: 'm u _ _ a _' }, 'Hitkatev': { structure: 'm i t _ a _ e _' }, 'Miktevet': { structure: 'm i _ _ e _ e t' }, 'Machtev': { structure: 'm a _ _ e _' }, 'Kitavon': { structure: '_ i _ a _ o n' }, 'Kteevah': { structure: '_ \' _ e e _ a h' }, 'Katvan': { structure: '_ a _ _ a n' }, 'Kteevut': { structure: '_ \' _ e e _ u t' }, 'Miktav': { structure: 'm a _ _ a _' }, 'Michtav': { structure: 'm i _ _ a _' }, 'Pele': { structure: '_ e _ e _' } };
+
+        // --- FILTER & CHEAT SHEET STATE ---
+        let cheatSheetMode = "SCAN";
+        let activePatterns = Object.keys(patternColors);
+
+        // --- AUDIO ENGINE ---
+        let audioCtx, musicGain, sfxGain, audioEnabled = false, isMusicMuted = false, isMusicStarted = false, currentChord = 0;
+        const chords = [ [164.81, 196.00, 246.94], [130.81, 164.81, 196.00], [146.83, 174.61, 220.00], [110.00, 130.81, 164.81] ];
+        function initAudio() { if (audioCtx) return; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); musicGain = audioCtx.createGain(); sfxGain = audioCtx.createGain(); musicGain.gain.value = 0.3; musicGain.connect(audioCtx.destination); sfxGain.gain.value = 0.8; sfxGain.connect(audioCtx.destination); audioEnabled = true; } catch (e) { audioEnabled = false; } }
+        document.getElementById("btn-mute-music").addEventListener("click", (e) => { isMusicMuted = !isMusicMuted; e.target.innerText = isMusicMuted ? "Unmute Music" : "Mute Music"; if (musicGain) musicGain.gain.value = isMusicMuted ? 0 : 0.3; });
+        function startGenerativeMusic() { if (!audioEnabled || !audioCtx || isMusicStarted) return; if (audioCtx.state === 'suspended') audioCtx.resume(); isMusicStarted = true; function playAmbientChord() { const freqs = chords[currentChord]; freqs.forEach((freq) => { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = freq; gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 3); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 8); osc.connect(gain); gain.connect(musicGain); osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 8); }); currentChord = (currentChord + 1) % chords.length; setTimeout(playAmbientChord, 6000); } playAmbientChord(); }
+        function playStrikeAudio() { if (!audioEnabled || !audioCtx) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.6); gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6); osc.connect(gain); gain.connect(sfxGain); osc.start(); osc.stop(audioCtx.currentTime + 0.6); }
+        function playSuccessBeep(level) { if (!audioEnabled || !audioCtx) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'square'; const freqs = [880, 1046.50, 1318.51, 1500]; osc.frequency.setValueAtTime(freqs[level-1] || 880, audioCtx.currentTime); gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2); osc.connect(gain); gain.connect(sfxGain); osc.start(); osc.stop(audioCtx.currentTime + 0.2); }
+        function playSpacebarProgress() { if (!audioEnabled || !audioCtx) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(440, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15); osc.connect(gain); gain.connect(sfxGain); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
+        function playHebrewTTS(text) { if ('speechSynthesis' in window && document.getElementById("voice-toggle").checked) { window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'he-IL'; utterance.rate = 0.85; window.speechSynthesis.speak(utterance); } }
+        function playNodeClick() { if (!audioEnabled || !audioCtx) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05); gain.gain.setValueAtTime(0.4, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05); osc.connect(gain); gain.connect(sfxGain); osc.start(); osc.stop(audioCtx.currentTime + 0.05); }
+
+        // --- GAME ENGINE MATRIX ---
+        let half1Data = [], half2Data = [], activeChallenges = [], currentTarget = null, progress = 0, gameState = "ROOT"; 
+        
+        function buildNewRoundMatrix() {
+            let pool = selectedCategory === "ALL" ? [...vocabData] : vocabData.filter(v => v.categoryId === selectedCategory);
+            let selectionPool = pool.filter(v => !masterLexicon.includes(v.id || v.targetWord));
+            if (selectionPool.length < 32) selectionPool = [...pool]; 
+            
+            // USE ACTIVE PATTERNS FROM FILTER
+            const targetPatterns = activePatterns.length > 0 ? [...activePatterns] : Object.keys(patternColors);
+            targetPatterns.sort(() => Math.random() - 0.5); 
+            
+            let roundWords = []; let usedRoots = new Set(); 
+            
+            // Loop through chosen patterns to construct the round
+            targetPatterns.forEach(targetPattern => {
+                let candidates = selectionPool.filter(v => v.basePattern === targetPattern && !usedRoots.has(v.root));
+                if (candidates.length > 0) { 
+                    candidates.sort(() => Math.random() - 0.5); let chosen = candidates[0]; roundWords.push(chosen); usedRoots.add(chosen.root); 
+                } else {
+                    let fallbackCandidates = selectionPool.filter(v => !usedRoots.has(v.root) && activePatterns.includes(v.basePattern));
+                    if(fallbackCandidates.length > 0) { fallbackCandidates.sort(() => Math.random() - 0.5); let chosen = fallbackCandidates[0]; roundWords.push(chosen); usedRoots.add(chosen.root); }
+                }
+            });
+            let roundChallenges = roundWords.map(v => ({ ...v, unlocked: false, uId: v.id || v.targetWord }));
+            let half = Math.ceil(roundChallenges.length / 2); half1Data = roundChallenges.slice(0, half); half2Data = roundChallenges.slice(half);
+        }
+        
+        function loadPhase() {
+            activeChallenges = currentHalf === 1 ? half1Data : half2Data;
+            if (activeChallenges.length === 0) { endOfPhase(); return; } 
+            activeChallenges.forEach(c => c.unlocked = false); progress = 0; 
+            document.getElementById("progress-text").innerText = "0"; document.getElementById("total-text").innerText = activeChallenges.length; document.getElementById("round-indicator").innerText = `R_${currentRoundNum}.${currentHalf}`;
+            nodesData = [{ id: "Sys.Core", type: 'core', label: 'שורש', color: '#f59e0b', fx: window.innerWidth / 2, fy: window.innerHeight / 2 }]; linksData = []; updateGraph(); pickNextChallenge();
+        }
+        function endOfPhase() {
+            document.getElementById("ui-panel").style.display = "none"; const modal = document.getElementById("round-modal");
+            if (currentHalf === 1 && half2Data.length > 0) { document.getElementById("modal-title").innerText = `Phase 1 Complete`; document.getElementById("modal-actions-half1").style.display = "block"; document.getElementById("modal-actions-half2").style.display = "none"; } 
+            else { document.getElementById("modal-title").innerText = `Round ${currentRoundNum} Complete`; document.getElementById("modal-actions-half1").style.display = "none"; document.getElementById("modal-actions-half2").style.display = "block"; }
+            modal.style.display = "flex";
+        }
+        document.getElementById("modal-cont-half2-btn").addEventListener("click", () => { document.getElementById("round-modal").style.display = "none"; document.getElementById("ui-panel").style.display = "block"; currentHalf = 2; saveProgress(); loadPhase(); });
+        document.getElementById("modal-next-round-btn").addEventListener("click", () => { document.getElementById("round-modal").style.display = "none"; document.getElementById("ui-panel").style.display = "block"; currentRoundNum++; currentHalf = 1; saveProgress(); buildNewRoundMatrix(); loadPhase(); });
+
+        // --- D3 PHYSICS, ZOOM, & DRAG LOGIC ---
+        let nodesData = [], linksData = [], globalNodeScale = 1.0, globalTension = 1.0, globalRepulsion = 1.0;
+        const svg = d3.select("#game-board"); svg.append("rect").attr("width", "100vw").attr("height", "100vh").style("fill", "none").style("pointer-events", "all");
+        const container = svg.append("g").attr("class", "zoom-container");
+        const zoom = d3.zoom().scaleExtent([0.1, 4]).on("zoom", (event) => { container.attr("transform", event.transform); }); svg.call(zoom); svg.on("dblclick.zoom", null); 
+        const simulation = d3.forceSimulation(nodesData).velocityDecay(0.85).force("link", d3.forceLink(linksData).id(d => d.id).distance(d => ((d.source.type === 'core' ? 120 : 70) * globalNodeScale) * globalTension)).force("charge", d3.forceManyBody().strength(d => ((d.type === 'core' ? -1000 : -300) * globalNodeScale) * globalRepulsion)).force("collide", d3.forceCollide().radius(d => (d.type==='core'?50:30) * globalNodeScale + 15).iterations(3)).force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+        let holdTimer = null;
+        function drag(simulation) {
+            return d3.drag().on("start", function(event, d) {
+                if (event.sourceEvent) event.sourceEvent.stopPropagation(); if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; playNodeClick(); 
+                const ring = d3.select(this).select(".hold-ring"); const circ = 2 * Math.PI * (((d.type==='core'?50:30) + 8) * globalNodeScale);
+                if(ring.node()) { ring.attr("stroke-dashoffset", circ); ring.transition().duration(800).ease(d3.easeLinear).attr("stroke-dashoffset", 0); }
+                holdTimer = setTimeout(() => {showNodeInfo(event, d); if(ring.node()) ring.interrupt().attr("stroke-dashoffset", circ); holdTimer = null; }, 800);
+            }).on("drag", function(event, d) { d.fx = event.x; d.fy = event.y; if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; const ring = d3.select(this).select(".hold-ring"); const circ = 2 * Math.PI * (((d.type==='core'?50:30) + 8) * globalNodeScale); if(ring.node()) ring.interrupt().transition().duration(200).attr("stroke-dashoffset", circ); }
+            }).on("end", function(event, d) { if (!event.active) simulation.alphaTarget(0); if (d.type !== 'core') { d.fx = null; d.fy = null; } if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; const ring = d3.select(this).select(".hold-ring"); const circ = 2 * Math.PI * (((d.type==='core'?50:30) + 8) * globalNodeScale); if(ring.node()) ring.interrupt().transition().duration(200).attr("stroke-dashoffset", circ); } });
+        }
+        let linkGroup = container.append("g"); let linkElements = linkGroup.selectAll("line"); let nodeGroup = container.append("g"); let nodeElements = nodeGroup.selectAll("g");
+        function updateGraph() {
+            const visibleNodes = nodesData.filter(n => !n.hidden);
+            const visibleLinks = linksData.filter(l => { const sourceNode = nodesData.find(n => n.id === (typeof l.source === 'object' ? l.source.id : l.source)); const targetNode = nodesData.find(n => n.id === (typeof l.target === 'object' ? l.target.id : l.target)); return sourceNode && targetNode && !sourceNode.hidden && !targetNode.hidden; });
+            linkElements = linkElements.data(visibleLinks, d => (typeof d.source === 'object' ? d.source.id : d.source) + "-" + (typeof d.target === 'object' ? d.target.id : d.target)); linkElements.exit().remove();
+            const linkEnter = linkElements.enter().append("line").attr("stroke", d => { const targetNode = nodesData.find(n => n.id === (typeof d.target === 'object' ? d.target.id : d.target)); return targetNode && targetNode.type === 'word' ? targetNode.color : "#444"; }).attr("stroke-width", 2); linkElements = linkEnter.merge(linkElements);
+            nodeElements = nodeElements.data(visibleNodes, d => d.id); nodeElements.exit().remove();
+            const nodeEnter = nodeElements.enter().append("g").call(drag(simulation)).on("dblclick", toggleNodeChildren); 
+            nodeEnter.append("circle").attr("class", "hold-ring").attr("fill", "none").attr("stroke", d => d.color || '#0084ff').attr("stroke-width", 4).style("opacity", 0.7).style("pointer-events", "none").attr("r", d => ((d.type==='core'?50:30) + 8) * globalNodeScale).attr("stroke-dasharray", d => 2 * Math.PI * (((d.type==='core'?50:30) + 8) * globalNodeScale)).attr("stroke-dashoffset", d => 2 * Math.PI * (((d.type==='core'?50:30) + 8) * globalNodeScale));
+            nodeEnter.append("circle").attr("class", "main-circle").attr("fill", "#1a1a1e").attr("stroke", d => d.type === 'core' ? '#f59e0b' : (d.color || '#0084ff')).style("cursor", d => d.type === 'core' ? "default" : "grab");
+            nodeEnter.append("text").attr("class", "node-label").text(d => d.label).attr("text-anchor", "middle").style("font-weight", "bold").style("pointer-events", "none").attr("fill", "#ffffff"); 
+            nodeElements = nodeEnter.merge(nodeElements);
+            nodeElements.select(".main-circle").attr("r", d => (d.type === 'core' ? 50 : 30) * globalNodeScale).attr("stroke-width", d => (d.type === 'core' ? 4 : 2) * globalNodeScale);
+            nodeElements.select(".hold-ring").attr("r", d => ((d.type==='core'?50:30) + 8) * globalNodeScale).attr("stroke-dasharray", d => 2 * Math.PI * (((d.type==='core'?50:30) + 8) * globalNodeScale));
+            nodeElements.select(".node-label").attr("dy", 5 * globalNodeScale).style("font-size", d => (d.type==='core'? 14 : 12) * globalNodeScale + "px");
+            simulation.nodes(visibleNodes); simulation.force("link").links(visibleLinks); simulation.alpha(1).restart(); 
+        }
+	function showNodeInfo(event, d) {
+            const panel = document.getElementById("info-panel"); 
+            document.getElementById("info-title").innerText = d.label; 
+            document.getElementById("info-subtitle").innerText = ""; 
+            
+            const audioBtn = document.getElementById("play-audio-btn");
+            
+            if (d.type === 'core') { 
+                document.getElementById("info-desc").innerText = "The Shoresh Matrix Core. Conceptual center for all language branches."; 
+                audioBtn.style.display = "none";
+            }
+            else if (d.type === 'category') { 
+                document.getElementById("info-desc").innerText = "Cognitive Category Hub."; 
+                audioBtn.style.display = "none";
+            }
+            else if (d.type === 'tri') { 
+                let rootDef = "Tri-radical root (Shoresh)."; 
+                for (let r in rootDictionary.triRoots) { if (rootDictionary.triRoots[r].hebrew === d.label) rootDef = rootDictionary.triRoots[r].definition; } 
+                document.getElementById("info-desc").innerText = rootDef; 
+                audioBtn.style.display = "none";
+            } 
+            else { 
+                document.getElementById("info-subtitle").innerText = `English: ${d.targetTranslation || "Translation"}`; 
+                document.getElementById("info-desc").innerHTML = `Compiled using the <strong>${d.basePattern || "Pattern"}</strong> pattern.<br><br>Grammar Rule: ${d.patternMeaning || "Rule"}`; 
+                
+                // Show the button and attach the TTS function to the active node's Hebrew label
+                audioBtn.style.display = "inline-block";
+                audioBtn.onclick = () => playHebrewTTS(d.label);
+            }
+            panel.style.display = "block"; 
+        }
+
+        function toggleChildren(parentId, isHidden) { linksData.forEach(l => { let sId = typeof l.source === 'object' ? l.source.id : l.source; let tId = typeof l.target === 'object' ? l.target.id : l.target; if (sId === parentId) { let childNode = nodesData.find(n => n.id === tId); if (childNode) { childNode.hidden = isHidden; if (isHidden) toggleChildren(childNode.id, true); } } }); }
+        function toggleNodeChildren(event, d) { if (d.type === 'core' || d.type === 'category' || d.type === 'tri') { let childrenIds = linksData.filter(l => (typeof l.source === 'object' ? l.source.id : l.source) === d.id).map(l => typeof l.target === 'object' ? l.target.id : l.target); if (childrenIds.length > 0) { let firstChild = nodesData.find(n => n.id === childrenIds[0]); if (firstChild) { let targetHiddenState = !firstChild.hidden; if (targetHiddenState === false) { childrenIds.forEach(cId => { let child = nodesData.find(n => n.id === cId); if (child) child.hidden = false; }); } else { toggleChildren(d.id, true); } simulation.alpha(1).restart(); updateGraph(); } } } }
+        simulation.on("tick", () => { linkElements.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y); nodeElements.attr("transform", d => `translate(${d.x},${d.y})`); });
+        function updateClock() { gameTimeSeconds++; let m = Math.floor(gameTimeSeconds / 60).toString().padStart(2, '0'); let s = (gameTimeSeconds % 60).toString().padStart(2, '0'); document.getElementById("clock-display").innerText = `${m}:${s}`; }
+
+        // --- SENTENCE BUILDER ---
+        const syntaxPanel = document.getElementById("syntax-panel"); let strikeSequence = [];
+        function openSyntaxBuilder() { syntaxPanel.style.display = "block"; const pool = document.getElementById("word-pool"); pool.innerHTML = ""; strikeSequence = []; renderStaging(); activeChallenges.filter(c => c.unlocked).forEach(c => { const chip = document.createElement("div"); chip.className = "word-chip"; chip.innerText = c.targetTranslation; chip.onclick = () => { strikeSequence.push(c); renderStaging(); }; pool.appendChild(chip); }); }
+        document.getElementById("btn-open-syntax").addEventListener("click", () => { document.getElementById("syntax-title").innerText = "SENTENCE BUILDER"; document.getElementById("syntax-title").style.color = "#10b981"; openSyntaxBuilder(); });
+        document.getElementById("btn-close-syntax").addEventListener("click", () => syntaxPanel.style.display = "none");
+        function renderStaging() { const stage = document.getElementById("staging-area"); stage.innerHTML = ""; strikeSequence.forEach((c, idx) => { const span = document.createElement("span"); span.style.color = c.color; span.style.fontWeight = "bold"; span.innerText = c.targetHebrew; span.onclick = () => { strikeSequence.splice(idx, 1); renderStaging(); }; stage.appendChild(span); }); const btnExec = document.getElementById("btn-execute-strike"); btnExec.style.display = strikeSequence.length >= 2 ? "block" : "none"; }
+        document.getElementById("btn-execute-strike").addEventListener("click", () => { if(strikeSequence.length < 2) return; playStrikeAudio(); syntaxPanel.style.display = "none"; const idsToRemove = strikeSequence.map(c => c.targetHebrew); nodesData = nodesData.filter(n => !idsToRemove.includes(n.label)); linksData = linksData.filter(l => { let sId = typeof l.source === 'object' ? l.source.id : l.source; let tId = typeof l.target === 'object' ? l.target.id : l.target; return nodesData.find(n => n.id === sId) && nodesData.find(n => n.id === tId); }); updateGraph(); });
+
+        // --- DYNAMIC CHEAT SHEET GENERATOR ---
+        document.getElementById("cs-mode-select").addEventListener("change", (e) => {
+            cheatSheetMode = e.target.value;
+            document.getElementById("cs-details").innerHTML = `<h3 style="margin-top:0; color:#888;">${cheatSheetMode === 'SCAN' ? 'Select a node to scan pattern data...' : 'Select nodes to enable/disable them for the next round.'}</h3>`;
+        });
+
+        function initCheatSheet() {
+            const binyanimGrid = document.getElementById("cs-binyanim");
+            const mishkalimGrid = document.getElementById("cs-mishkalim");
+            
+            const binyanim = ['Katav', 'Nichtav', 'Kitev', 'Kutav', 'Hichtiv', 'Huchtav', 'Hitkatev'];
+            const allPatterns = Object.keys(patternColors);
+            
+            allPatterns.forEach(pattern => {
+                const btn = document.createElement("div");
+                btn.className = "cs-node";
+                btn.innerText = pattern;
+                btn.style.borderColor = patternColors[pattern];
+                
+                btn.onclick = () => {
+                    if (cheatSheetMode === "SCAN") {
+                        renderCheatSheetDetails(pattern);
+                    } else if (cheatSheetMode === "FILTER") {
+                        if (activePatterns.includes(pattern)) {
+                            activePatterns = activePatterns.filter(p => p !== pattern);
+                            btn.classList.add("disabled");
+                        } else {
+                            activePatterns.push(pattern);
+                            btn.classList.remove("disabled");
+                        }
+                    }
+                };
+
+                if (binyanim.includes(pattern)) binyanimGrid.appendChild(btn);
+                else mishkalimGrid.appendChild(btn);
+            });
+        }
+
+        function renderCheatSheetDetails(pattern) {
+            const detailsDiv = document.getElementById("cs-details");
+            const color = patternColors[pattern] || "#fff";
+            const template = affixData[pattern] ? affixData[pattern].structure : "Unknown Structure";
+            const examples = vocabData.filter(v => v.basePattern === pattern);
+            
+            let exampleHtml = examples.map(e => `
+                <li style="margin-bottom: 8px;">
+                    <strong style="color:${color}; font-size: 18px;">${e.targetHebrew}</strong> 
+                    <span style="color:#aaa;">(${e.targetWord})</span> - 
+                    <span style="color:#fff;">${e.targetTranslation}</span> 
+                    <span style="color:#666; font-size: 12px;">[Root: ${e.root}]</span>
+                </li>
+            `).join('');
+            
+            if(!exampleHtml) exampleHtml = "<li style='color:#666;'>No data compiled in current matrix.</li>";
+            let rule = examples.length > 0 ? examples[0].patternMeaning : "Unknown Protocol";
+
+            detailsDiv.style.borderLeftColor = color;
+            detailsDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="color:${color}; margin-top:0; margin-bottom: 5px; letter-spacing: 1px;">${pattern.toUpperCase()}</h3>
+                        <p style="color:#aaa; font-size: 14px; margin: 0;"><strong>System Logic:</strong> ${rule}</p>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.8); border: 1px solid ${color}; padding: 10px 15px; border-radius: 6px; font-family: monospace; font-size: 20px; color: #fff; letter-spacing: 4px; box-shadow: 0 0 10px ${color}44;">
+                        ${template.toUpperCase()}
+                    </div>
+                </div>
+                <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 10px;">
+                    <p style="color:#888; font-size: 12px; font-weight: bold; margin-bottom: 5px;">COMPILED EXAMPLES:</p>
+                    <ul style="list-style-type: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto;">
+                        ${exampleHtml}
+                    </ul>
+                </div>
+            `;
+        }
+        initCheatSheet();
+
+        // --- MASTERGRAPH RENDERER ---
+        let masterSimulation;
+        function renderMastergraph() {
+            const svg = d3.select("#mastergraph-board"); svg.selectAll("*").remove();
+            svg.append("rect").attr("width", "100%").attr("height", "100%").style("fill", "none").style("pointer-events", "all");
+            const container = svg.append("g").attr("class", "zoom-container");
+            const mZoom = d3.zoom().scaleExtent([0.1, 4]).on("zoom", (e) => container.attr("transform", e.transform)); svg.call(mZoom); svg.on("dblclick.zoom", null);
+            let mNodes = []; let mLinks = [];
+            mNodes.push({ id: 'HebrewCore', label: 'שורש', type: 'core', color: '#f59e0b' });
+            const masteredWords = vocabData.filter(v => masterLexicon.includes(v.id || v.targetWord));
+            masteredWords.forEach(w => {
+                let catId = w.categoryId || "Uncategorized"; let rootId = w.root; let wordId = "master_" + (w.id || w.targetWord);
+                let catColor = categoryColors[catId] || '#f59e0b'; let wordColor = patternColors[w.basePattern] || catColor;
+                if (!mNodes.find(n => n.id === catId)) { mNodes.push({ id: catId, label: catId.toUpperCase(), type: 'category', color: catColor }); mLinks.push({ source: 'HebrewCore', target: catId }); }
+                if (!mNodes.find(n => n.id === rootId)) { mNodes.push({ id: rootId, label: rootId, type: 'tri', color: catColor }); mLinks.push({ source: catId, target: rootId }); }
+                if (!mNodes.find(n => n.id === wordId)) { mNodes.push({ id: wordId, label: w.targetHebrew, type: 'word', color: wordColor, translation: w.targetTranslation }); mLinks.push({ source: rootId, target: wordId }); }
+            });
+            masterSimulation = d3.forceSimulation(mNodes).velocityDecay(0.85).force("link", d3.forceLink(mLinks).id(d => d.id).distance(d => (d.source.type === 'core' ? 250 : 120))).force("charge", d3.forceManyBody().strength(d => (d.type === 'core' ? -3000 : -800))).force("collide", d3.forceCollide().radius(d => (d.type === 'core' ? 60 : 40)).iterations(3)).force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+            const link = container.append("g").selectAll("line").data(mLinks).enter().append("line").attr("stroke", d => { let target = mNodes.find(n => n.id === (typeof d.target === 'object' ? d.target.id : d.target)); return target && target.type === 'word' ? target.color : "#444"; }).attr("stroke-width", 2);
+            const node = container.append("g").selectAll("g").data(mNodes).enter().append("g").call(d3.drag().on("start", (event, d) => { event.sourceEvent.stopPropagation(); if (!event.active) masterSimulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }).on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; }).on("end", (event, d) => { if (!event.active) masterSimulation.alphaTarget(0); if (d.type !== 'core') { d.fx = null; d.fy = null; } }));
+            node.append("circle").attr("r", d => d.type === 'core' ? 60 : (d.type === 'category' ? 40 : 35)).attr("fill", "#1a1a1e").attr("stroke", d => d.type === 'core' ? '#f59e0b' : d.color).attr("stroke-width", 3);
+            node.append("text").text(d => d.label).attr("text-anchor", "middle").attr("dy", 5).style("font-size", "14px").style("font-weight", "bold").style("fill", "#ffffff").style("pointer-events", "none");
+            node.append("title").text(d => d.translation || d.label);
+            masterSimulation.on("tick", () => { link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y); node.attr("transform", d => `translate(${d.x},${d.y})`); });
+        }
+
+        // --- KINETIC ASSEMBLY SCREEN LOGIC ---
+        let activeRootElements = [], activeTargetSpots = [];
+        function showAssemblyFlash() {
+            const flash = document.getElementById("assembly-flash"), stage = document.getElementById("kinetic-stage"); if(!flash || !stage) return;
+            stage.innerHTML = ""; activeRootElements = []; activeTargetSpots = [];
+            const rootLetters = currentTarget.root.split('-'), template = affixData[currentTarget.basePattern]?.structure || "_ _ _ _ _", pieces = template.split(' ');
+            document.getElementById("assem-rule").innerText = `Pattern: ${currentTarget.basePattern}`; flash.style.borderColor = patternColors[currentTarget.basePattern] || '#0084ff'; flash.classList.add("active");
+            const tempContainer = document.createElement("div"); tempContainer.className = "template-container";
+            pieces.forEach(p => { const span = document.createElement("span"); if (p === '_') { span.className = "target-blank"; span.innerText = "_"; activeTargetSpots.push(span); } else { span.className = "affix-char"; span.innerText = p; } tempContainer.appendChild(span); });
+            const rootContainer = document.createElement("div"); rootContainer.className = "root-container";
+            rootLetters.forEach(letter => { const span = document.createElement("span"); span.className = "floating-root"; span.innerText = letter; rootContainer.appendChild(span); activeRootElements.push(span); });
+            stage.appendChild(tempContainer); stage.appendChild(rootContainer);
+            document.getElementById("assembly-prompt").innerText = "PRESS SPACE TO ASSEMBLE"; gameState = "ASSEMBLY_READY"; 
+        }
+        function triggerKineticPull() {
+            gameState = "ASSEMBLY_ANIMATING"; playSpacebarProgress();
+            activeRootElements.forEach((rootEl, i) => {
+                setTimeout(() => {
+                    const blankEl = activeTargetSpots[i]; if(!blankEl) return;
+                    const rRect = rootEl.getBoundingClientRect(), bRect = blankEl.getBoundingClientRect();
+                    const deltaX = bRect.left - rRect.left + (bRect.width/2 - rRect.width/2), deltaY = bRect.top - rRect.top - 8; 
+                    rootEl.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    setTimeout(() => { rootEl.style.opacity = 0; blankEl.style.color = patternColors[currentTarget.basePattern] || "#f59e0b"; blankEl.innerText = rootEl.innerText; playNodeClick(); }, 500); 
+                }, i * 200); 
+            });
+            setTimeout(() => { document.getElementById("assembly-prompt").innerText = "PRESS SPACE TO DEPLOY"; gameState = "ASSEMBLY_DONE"; }, (activeRootElements.length * 200) + 600);
+        }
+
+        // --- PHASED WORD COMPILATION/DECONSTRUCTION LOGIC ---
+        function pickNextChallenge() {
+            const available = activeChallenges.filter(n => !n.unlocked); if (available.length === 0) { endOfPhase(); return; }
+            currentTarget = available[Math.floor(Math.random() * available.length)];
+            
+            if (document.getElementById("deconstruct-toggle").checked) {
+                // INITIATE DECONSTRUCTION FLOW
+                gameState = "DECONSTRUCT_ROOT";
+                inputField.style.display = "inline-block"; inputField.value = ""; 
+                inputField.placeholder = "Extract the 3-letter root (e.g. ש-ט-ר)..."; inputField.focus();
+                defSelect.style.display = "none"; revealBtn.style.display = "inline-block";
+                document.getElementById("prompt-text").innerHTML = `<span style="color:#a855f7">Step 1 - Deconstruct Root:</span> <strong>${currentTarget.targetHebrew}</strong> (${currentTarget.targetWord})`;
+            } else {
+                // INITIATE CONSTRUCTION FLOW
+                gameState = "ROOT"; inputField.style.display = "inline-block"; inputField.value = ""; inputField.placeholder = "Type the 3-letter root (e.g. ש-ט-ר)"; inputField.focus(); 
+                defSelect.style.display = "none"; revealBtn.style.display = "inline-block";
+                const rootDef = rootDictionary.triRoots[currentTarget.root]?.definition || "Root";
+                document.getElementById("prompt-text").innerHTML = `<span style="color:#facc15">Step 1 - Retrieve Root:</span> ${rootDef}`;
+            }
+        }
+        
+        function spawnHierarchy() {
+            const wordColor = patternColors[currentTarget.basePattern] || currentTarget.color || '#f59e0b';
+            const catId = currentTarget.categoryId || "Uncategorized"; const triData = rootDictionary.triRoots[currentTarget.root]; 
+            const triId = currentTarget.root; const baseWordId = currentTarget.uId; const wordId = baseWordId + '-' + Date.now(); 
+            const cx = window.innerWidth / 2; const cy = window.innerHeight / 2; const jiggle = () => (Math.random() - 0.5) * 30;
+
+            if (!nodesData.find(n => n.id === catId)) { nodesData.push({ id: catId, type: 'category', label: catId, color: wordColor, x: cx + jiggle(), y: cy + jiggle(), hidden: false }); linksData.push({ source: "Sys.Core", target: catId }); }
+            if (!nodesData.find(n => n.id === triId)) { nodesData.push({ id: triId, type: 'tri', label: triData ? triData.hebrew : triId, color: wordColor, x: cx + jiggle(), y: cy + jiggle(), hidden: false }); linksData.push({ source: catId, target: triId }); }
+            nodesData.push({ id: wordId, type: 'word', label: currentTarget.targetHebrew, color: wordColor, targetTranslation: currentTarget.targetTranslation, basePattern: currentTarget.basePattern, patternMeaning: currentTarget.patternMeaning, x: cx + jiggle(), y: cy + jiggle(), hidden: false });
+            linksData.push({ source: triId, target: wordId });
+
+            if (!masterLexicon.includes(baseWordId)) { masterLexicon.push(baseWordId); localStorage.setItem('hebrewSemanticOS_Lexicon', JSON.stringify(masterLexicon)); }
+            updateGraph(); setTimeout(() => { toggleChildren(triId, true); updateGraph(); }, 2500); setTimeout(() => { toggleChildren(catId, true); updateGraph(); }, 2800); 
+        }
+
+        function triggerSuccessAnimation() {
+            currentTarget.unlocked = true; inputField.value = "";
+            inputField.blur(); defSelect.blur(); submitBtn.blur(); 
+            
+            const asmToggle = document.getElementById("assembly-toggle");
+            // If in deconstruct mode or assembly is off, just show the flash card
+            if (asmToggle && asmToggle.checked && !document.getElementById("deconstruct-toggle").checked) { 
+                showAssemblyFlash(); 
+            } else { 
+                const flash = document.getElementById("word-flash"); 
+                document.getElementById("flash-hebrew").innerText = currentTarget.targetHebrew; 
+                document.getElementById("flash-translit").innerText = currentTarget.targetWord.toUpperCase(); 
+                document.getElementById("flash-def").innerText = currentTarget.targetTranslation;
+                flash.style.borderColor = patternColors[currentTarget.basePattern] || '#0084ff'; flash.classList.add("active"); 
+                playHebrewTTS(currentTarget.targetHebrew); gameState = "FLASH_WAIT"; 
+            }
+        }
+
+        // --- SUBMIT LOGIC ---
+        submitBtn.addEventListener("click", () => {
+            document.getElementById("cheat-sheet-overlay").style.display = "none";
+            const rawInput = inputField.value.trim().toLowerCase();
+            
+            // --- CONSTRUCTION PATH ---
+          if (gameState === "ROOT") {
+                const userInput = stripNiqqud(rawInput).replace(/-/g, ''); const expectedRoot = stripNiqqud(currentTarget.root).replace(/-/g, '').toLowerCase();
+                if (currentTarget && userInput === expectedRoot) { 
+                    playSuccessBeep(1); 
+                    gameState = "WORD"; 
+                    inputField.value = ""; 
+                    inputField.placeholder = "Type transliteration or עברית..."; 
+                    
+                    // Directly inject the exact Pealim label we saved in the middleware!
+                    document.getElementById("prompt-text").innerHTML = `<span style="color:${patternColors[currentTarget.basePattern] || '#facc15'}">▶</span> Root: ${currentTarget.root} | Pattern: ${currentTarget.basePattern} | Form: ${currentTarget.rawGrammar}`; 
+                } 
+                else { inputField.classList.add("error"); setTimeout(()=>inputField.classList.remove("error"), 400); }
+            }
+            else if (gameState === "WORD") {
+                const cleanInput = stripNiqqud(rawInput); const cleanHebrew = stripNiqqud(currentTarget.targetHebrew);
+                if (currentTarget && (rawInput === currentTarget.targetWord.toLowerCase() || cleanInput === cleanHebrew)) {
+                    playSuccessBeep(2); 
+                    if (document.getElementById("def-drill-toggle").checked) { gameState = "DEF"; inputField.style.display = "none"; defSelect.style.display = "inline-block"; defSelect.focus(); document.getElementById("prompt-text").innerHTML = `<span style="color:#10b981">Match Logic:</span> ${currentTarget.basePattern}`; } 
+                    else if (document.getElementById("trans-drill-toggle").checked) { gameState = "TRANS"; inputField.style.display = "inline-block"; inputField.value = ""; inputField.placeholder = "Type English translation..."; inputField.focus(); defSelect.style.display = "none"; document.getElementById("prompt-text").innerHTML = `<span style="color:#10b981">Deduce Translation:</span> ${rootDictionary.triRoots[currentTarget.root]?.definition || "Root"} + ${currentTarget.patternMeaning}`; } 
+                    else triggerSuccessAnimation();
+                } else { inputField.classList.add("error"); setTimeout(()=>inputField.classList.remove("error"), 400); }
+            } 
+            else if (gameState === "DEF") {
+                if (defSelect.value === currentTarget.patternMeaning) { 
+                    playSuccessBeep(3); 
+                    if (document.getElementById("trans-drill-toggle").checked) { gameState = "TRANS"; inputField.style.display = "inline-block"; inputField.value = ""; inputField.placeholder = "Type English translation..."; inputField.focus(); defSelect.style.display = "none"; document.getElementById("prompt-text").innerHTML = `<span style="color:#10b981">Deduce Translation:</span> ${rootDictionary.triRoots[currentTarget.root]?.definition || "Root"} + ${currentTarget.patternMeaning}`; } 
+                    else triggerSuccessAnimation();
+                } else { defSelect.classList.add("error"); setTimeout(()=>defSelect.classList.remove("error"), 400); }
+            }
+            else if (gameState === "TRANS") {
+                const possibleAnswers = currentTarget.targetTranslation.toLowerCase().split(/[,;/]/).map(s => s.trim());
+                if (possibleAnswers.includes(rawInput)) { playSuccessBeep(4); triggerSuccessAnimation(); } 
+                else { inputField.classList.add("error"); setTimeout(()=>inputField.classList.remove("error"), 400); }
+            }
+            
+            // --- DECONSTRUCTION PATH ---
+            else if (gameState === "DECONSTRUCT_ROOT") {
+                const userInput = stripNiqqud(rawInput).replace(/-/g, '');
+                const expectedRoot = stripNiqqud(currentTarget.root).replace(/-/g, '').toLowerCase();
+                if (userInput === expectedRoot) {
+                    playSuccessBeep(1);
+                    gameState = "DECONSTRUCT_PATTERN";
+                    inputField.style.display = "none";
+                    defSelect.style.display = "inline-block";
+                    defSelect.value = "";
+                    defSelect.focus();
+                    document.getElementById("prompt-text").innerHTML = `<span style="color:#10b981">Step 2 - Identify Logic:</span> Which pattern built <strong>${currentTarget.targetHebrew}</strong>?`;
+                } else { inputField.classList.add("error"); setTimeout(()=>inputField.classList.remove("error"), 400); }
+            }
+            else if (gameState === "DECONSTRUCT_PATTERN") {
+                if (defSelect.value === currentTarget.patternMeaning) {
+                    playSuccessBeep(2);
+                    gameState = "DECONSTRUCT_TRANS";
+                    inputField.style.display = "inline-block";
+                    inputField.value = "";
+                    inputField.placeholder = "Type English translation...";
+                    inputField.focus();
+                    defSelect.style.display = "none";
+                    document.getElementById("prompt-text").innerHTML = `<span style="color:#10b981">Step 3 - Final Deduction:</span> ${rootDictionary.triRoots[currentTarget.root]?.definition || "Root"} + ${currentTarget.patternMeaning}`;
+                } else { defSelect.classList.add("error"); setTimeout(()=>defSelect.classList.remove("error"), 400); }
+            }
+            else if (gameState === "DECONSTRUCT_TRANS") {
+                const possibleAnswers = currentTarget.targetTranslation.toLowerCase().split('/').map(s => s.trim());
+                if (possibleAnswers.includes(rawInput)) {
+                    playSuccessBeep(3);
+                    triggerSuccessAnimation();
+                } else { inputField.classList.add("error"); setTimeout(()=>inputField.classList.remove("error"), 400); }
+            }
+        });
+
+        revealBtn.addEventListener("click", () => {
+    if (!currentTarget) return;
+    if (gameState === "ROOT") { inputField.value = currentTarget.root; inputField.focus(); }
+    else if (gameState === "WORD") { inputField.value = currentTarget.targetHebrew; inputField.focus(); } 
+    else if (gameState === "DEF") { defSelect.value = currentTarget.patternMeaning; defSelect.focus(); } 
+    else if (gameState === "TRANS") { 
+        inputField.style.display = "inline-block"; 
+        inputField.value = currentTarget.targetTranslation.split(/[,;/]/)[0].trim(); 
+        inputField.focus(); 
+    }
+    else if (gameState === "DECONSTRUCT_ROOT") { inputField.value = currentTarget.root; inputField.focus(); }
+    else if (gameState === "DECONSTRUCT_PATTERN") { defSelect.value = currentTarget.patternMeaning; defSelect.focus(); }
+    else if (gameState === "DECONSTRUCT_TRANS") { 
+        inputField.style.display = "inline-block"; 
+        inputField.value = currentTarget.targetTranslation.split(/[,;/]/)[0].trim(); 
+        inputField.focus(); 
+    }
+});
+        
+        inputField.addEventListener("keydown", (e) => { if (e.key === "Enter") submitBtn.click(); }); defSelect.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitBtn.click(); } });
+        document.getElementById("boot-btn").addEventListener("click", () => { selectedCategory = document.getElementById("mode-select").value; document.getElementById("boot-screen").style.display = "none"; startGame(); });
+
+        function startGame() { initAudio(); startGenerativeMusic(); clearInterval(clockInterval); gameTimeSeconds = 0; document.getElementById("clock-display").innerText = "00:00"; clockInterval = setInterval(updateClock, 1000); document.getElementById("ui-panel").style.display = "block"; document.getElementById("top-controls").style.display = "flex"; document.getElementById("clock-display").style.display = "block"; if (activeChallenges.length === 0) { buildNewRoundMatrix(); } loadPhase(); }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.code === "Tab") { e.preventDefault(); const bootScreen = document.getElementById("boot-screen"); if (bootScreen.style.display !== "none") { const mgOverlay = document.getElementById("mastergraph-overlay"); if (mgOverlay.style.display === "none" || mgOverlay.style.display === "") { mgOverlay.style.display = "block"; renderMastergraph(); } else { mgOverlay.style.display = "none"; if(masterSimulation) masterSimulation.stop(); } } return; }
+            if (e.code === "Escape") { clearInterval(clockInterval); document.getElementById("ui-panel").style.display = "none"; document.getElementById("top-controls").style.display = "none"; document.getElementById("clock-display").style.display = "none"; document.getElementById("syntax-panel").style.display = "none"; document.getElementById("mastergraph-overlay").style.display = "none"; document.getElementById("cheat-sheet-overlay").style.display = "none"; document.getElementById("assembly-flash").classList.remove("active"); document.getElementById("word-flash").classList.remove("active"); document.getElementById("boot-screen").style.display = "flex"; overlayActive = false; if(masterSimulation) masterSimulation.stop(); nodesData = []; linksData = []; updateGraph(); return; }
+            
+            if (e.code === "Space") {
+                if (document.activeElement.tagName === "BUTTON") { document.activeElement.blur(); }
+                if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "SELECT") { return; }
+                e.preventDefault(); 
+                
+                const mgOverlay = document.getElementById("mastergraph-overlay"); 
+                if(mgOverlay.style.display === "block") { mgOverlay.style.display = "none"; if(masterSimulation) masterSimulation.stop(); return; }
+
+                // CHEAT SHEET TOGGLE
+                if (["ROOT", "WORD", "DEF", "TRANS", "DECONSTRUCT_ROOT", "DECONSTRUCT_PATTERN", "DECONSTRUCT_TRANS"].includes(gameState)) {
+                    const cheatSheet = document.getElementById("cheat-sheet-overlay");
+                    if (cheatSheet.style.display === "block") {
+                        cheatSheet.style.display = "none";
+                    } else {
+                        cheatSheet.style.display = "block";
+                    }
+                    return;
+                }
+
+                if (gameState === "ASSEMBLY_READY") { triggerKineticPull(); return; }
+                if (gameState === "ASSEMBLY_ANIMATING") { return; }
+                if (gameState === "ASSEMBLY_DONE") { playSpacebarProgress(); const af = document.getElementById("assembly-flash"); if(af) af.classList.remove("active"); const flash = document.getElementById("word-flash"); if(flash) { document.getElementById("flash-hebrew").innerText = currentTarget.targetHebrew; document.getElementById("flash-translit").innerText = currentTarget.targetWord.toUpperCase(); document.getElementById("flash-def").innerText = currentTarget.targetTranslation; flash.style.borderColor = patternColors[currentTarget.basePattern] || '#0084ff'; setTimeout(() => { flash.classList.add("active"); playHebrewTTS(currentTarget.targetHebrew); }, 300); } gameState = "FLASH_WAIT"; return; }
+                if (gameState === "FLASH_WAIT") { gameState = "DEPLOYING"; document.getElementById("word-flash").classList.remove("active"); setTimeout(() => { spawnHierarchy(); progress++; document.getElementById("progress-text").innerText = progress; currentTarget = null; pickNextChallenge(); }, 300); }
+            }
+        });
+    </script>
+</body>
+</html>
