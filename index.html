@@ -241,29 +241,18 @@
         
         // --- DICTIONARY ---
         // Dictionary for categorising words via triggerWords
-        const semanticTopics = {
-            "Combat & Threat": ["kill", "blood", "gun", "war", "strike", "fear", "attack", "guard"],
-            "Commerce & Retail": ["buy", "sell", "pay", "cost", "money", "shop", "store"],
-            "Biology & Nature": ["tree", "animal", "water", "sea", "bird", "body", "medical"],
-        };
        
-        function assignCategory(def) {     
-            let cleanDef = def.toLowerCase();
-           
-           for (let categoryName in semanticTopics){
-            // grabs array of trigger words for current category
-            let triggerWords = semanticTopics[categoryName];
-            // Ask JS: Does cleanDef include ANY trigger word? (return's T OR F)
-            let triggerFound = triggerWords.some(word => cleanDef.includes(word));
-            // If true, kill's function and return's category name
-            if (triggerFound) {
-                return categoryName;
-
+       
+        function assignCategory(root) {               
+            const cleanRoot = stripNiqqud(root).replace(/-/g, '').trim();
+            if (cleanRoot.length >= 2){
+                return `Gate ${cleanRoot[0]}-${cleanRoot[1]}`;
             }
-          }
+            return cleanRoot.length === 1 ? `Gate ${cleanRoot[0]}` : "Uncategorised";
+        
+          };
           // Fallback if loop finishes without finding any matches
-          return "uncategorised"; 
-        }
+        
         // --- THE MIDDLEWARE TRANSLATOR ---
         function translatePattern(rawPattern) {
             let p = rawPattern.toLowerCase();
@@ -319,9 +308,7 @@
                 let hebWord = conjugatedWords[rawPattern];
                 let gamePattern = translatePattern(rawPattern);
                 let pMeaning = getPatternMeaning(gamePattern);
-
-                // 1. call new function to assign category
-                let dynamicCategory = assignCategory(engDef);
+                let dynamicCategory = assignCategory(root);
                 // 2. push it into the game's memory
                 vocabData.push({
                     root: root,
@@ -422,6 +409,23 @@
         const container = svg.append("g").attr("class", "zoom-container");
         const zoom = d3.zoom().scaleExtent([0.1, 4]).on("zoom", (event) => { container.attr("transform", event.transform); }); svg.call(zoom); svg.on("dblclick.zoom", null); 
         const simulation = d3.forceSimulation(nodesData).velocityDecay(0.85).force("link", d3.forceLink(linksData).id(d => d.id).distance(d => ((d.source.type === 'core' ? 120 : 70) * globalNodeScale) * globalTension)).force("charge", d3.forceManyBody().strength(d => ((d.type === 'core' ? -1000 : -300) * globalNodeScale) * globalRepulsion)).force("collide", d3.forceCollide().radius(d => (d.type==='core'?50:30) * globalNodeScale + 15).iterations(3)).force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+        
+        document.getElementById("tension-slider").addEventListener("input", (e) => {
+            globalTension = parseFloat(e.target.value);
+            updateGraph();
+           
+        });
+        document.getElementById("repulsion-slider").addEventListener("input", (e) => {
+            globalRepulsion = parseFloat(e.target.value);
+            updateGraph();
+
+        });
+        document.getElementById("node-size-slider").addEventListener("input", (e) => {
+            globalNodeScale = parseFloat(e.target.value);
+            updateGraph();
+          
+        });
+
         let holdTimer = null;
         function drag(simulation) {
             return d3.drag().on("start", function(event, d) {
@@ -602,7 +606,16 @@
         function showAssemblyFlash() {
             const flash = document.getElementById("assembly-flash"), stage = document.getElementById("kinetic-stage"); if(!flash || !stage) return;
             stage.innerHTML = ""; activeRootElements = []; activeTargetSpots = [];
-            const rootLetters = currentTarget.root.split('-'), template = affixData[currentTarget.basePattern]?.structure || "_ _ _ _ _", pieces = template.split(' ');
+            const cleanRoot = stripNiqqud(currentTarget.root).trim();
+            const rootLetters = currentTarget.root.includes('-')
+                ? currentTarget.root.split('-')
+                : cleanRoot.split('');
+            const isStandardTriRoot = currentTarget.root.includes('-') && rootLetters.length === 3 && affixData[currentTarget.basePattern];
+            const template = isStandardTriRoot
+                ? affixData[currentTarget.basePattern].structure
+                : rootLetters.map(() => '_').join(' ');
+            const pieces = template.split(' ');
+
             document.getElementById("assem-rule").innerText = `Pattern: ${currentTarget.basePattern}`; flash.style.borderColor = patternColors[currentTarget.basePattern] || '#0084ff'; flash.classList.add("active");
             const tempContainer = document.createElement("div"); tempContainer.className = "template-container";
             pieces.forEach(p => { const span = document.createElement("span"); if (p === '_') { span.className = "target-blank"; span.innerText = "_"; activeTargetSpots.push(span); } else { span.className = "affix-char"; span.innerText = p; } tempContainer.appendChild(span); });
@@ -622,7 +635,7 @@
                     setTimeout(() => { rootEl.style.opacity = 0; blankEl.style.color = patternColors[currentTarget.basePattern] || "#f59e0b"; blankEl.innerText = rootEl.innerText; playNodeClick(); }, 500); 
                 }, i * 200); 
             });
-            setTimeout(() => { document.getElementById("assembly-prompt").innerText = "PRESS SPACE TO DEPLOY"; gameState = "ASSEMBLY_DONE"; }, (activeRootElements.length * 200) + 600);
+            setTimeout(() => { document.getElementById("assembly-prompt").innerText = "PRESS SPACE TO DEPLOY"; gameState = "ASSEMBLY_DONE"; playSuccessBeep(4); }, (activeRootElements.length * 200) + 600);
         }
 
         // --- PHASED WORD COMPILATION/DECONSTRUCTION LOGIC ---
