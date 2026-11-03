@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!--
+SPDX-License-Identifier: PolyForm-Shield-1.0.0
+License-URL: https://polyformproject.org/licenses/shield/1.0.0
+Required Notice: Copyright (c) 2026 Professor-Sam-Sepi0l (https://github.com/Professor-Sam-Sepi0l/hebger)
+Licensor Line of Business: Hebger / Hebrew Semantic Engine (https://github.com/Professor-Sam-Sepi0l/hebger) — interactive language learning, root-pattern compilation, and linguistic visualization software and games.
+See LICENSE and NOTICE in the source repository for full license terms and third-party notices.
+-->
 <html lang="en">
 <head>
     <script src="database.js"></script>
@@ -65,13 +72,6 @@
         .target-blank { color: #555; text-align: center; display: inline-block; width: 36px; margin: 0 2px; transition: color 0.3s; }
         .floating-root { transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s; display: inline-block; width: 36px; text-align: center; font-family: monospace;}
         
-        /* SYNTAX BUILDER PANEL */
-        /*#syntax-panel { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(20,20,24,0.95); border-radius: 8px; border: 1px solid #10b981; padding: 20px; z-index: 60; display: none; width: 600px; text-align: center; box-shadow: 0 5px 30px rgba(0,0,0,0.5);}
-        #word-pool { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 15px; }
-        .word-chip { background: #333; border: 1px solid #555; padding: 6px 14px; cursor: pointer; border-radius: 6px; font-size: 14px; transition: all 0.2s;}
-        .word-chip:hover { border-color: #10b981; background: #1a1a1e; color: #fff;}
-        #staging-area { min-height: 50px; border: 2px dashed #444; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3);}
-        */
         /* MASTERGRAPH OVERLAY */
         #mastergraph-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10,10,12,0.98); z-index: 300; display: none; overflow: hidden; }
         #mastergraph-title { position: absolute; top: 20px; left: 20px; color: #a855f7; font-size: 24px; font-weight: bold; letter-spacing: 2px; z-index: 310; pointer-events: none;}
@@ -122,15 +122,6 @@
         <div class="blinking-prompt">PRESS SPACE TO DEPLOY</div>
     </div>
 
-    
-        <h3 id="syntax-title" style="color:#10b981; margin-top:0; font-size: 18px;">SENTENCE BUILDER</h3>
-        <p id="syntax-desc" style="color:#888; font-size: 13px;">String nodes together to clear them from the network.</p>
-        <div id="word-pool"></div>
-        <div id="staging-area"></div>
-        <button id="btn-execute-strike" class="btn btn-action" style="width: 100%; display:none;">BUILD & CLEAR SENTENCE</button>
-        <button id="btn-close-syntax" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #888; cursor: pointer; font-size: 16px;">✖</button>
-    </div>
-
     <div id="round-modal">
         <div class="modal-box">
             <h2 id="modal-title" style="color:#f59e0b;">Phase Complete</h2>
@@ -146,7 +137,6 @@
         <div class="slider-group"><label>SFX</label><input type="range" id="sfx-vol" min="0" max="1" step="0.05" value="0.8"></div>
         <div class="slider-group" style="margin-top: 10px;"><label>TENSION</label><input type="range" id="tension-slider" min="0.1" max="3.0" step="0.1" value="1.0"></div>
         <div class="slider-group"><label>REPULSION</label><input type="range" id="repulsion-slider" min="0.1" max="4.0" step="0.1" value="1.0"></div>
-         class="mini-btn" style="background:#10b981; border-color:#10b981; margin-top: 10px;">Sentence Builder</button>
     </div>
     
     <div id="clock-display">00:00</div>
@@ -353,7 +343,6 @@
         function initAudio() { if (audioCtx) return; try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); musicGain = audioCtx.createGain(); sfxGain = audioCtx.createGain(); musicGain.gain.value = 0.3; musicGain.connect(audioCtx.destination); sfxGain.gain.value = 0.8; sfxGain.connect(audioCtx.destination); audioEnabled = true; } catch (e) { audioEnabled = false; } }
         document.getElementById("btn-mute-music").addEventListener("click", (e) => { isMusicMuted = !isMusicMuted; e.target.innerText = isMusicMuted ? "Unmute Music" : "Mute Music"; if (musicGain) musicGain.gain.value = isMusicMuted ? 0 : 0.3; });
         function startGenerativeMusic() { if (!audioEnabled || !audioCtx || isMusicStarted) return; if (audioCtx.state === 'suspended') audioCtx.resume(); isMusicStarted = true; function playAmbientChord() { const freqs = chords[currentChord]; freqs.forEach((freq) => { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = freq; gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 3); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 8); osc.connect(gain); gain.connect(musicGain); osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 8); }); currentChord = (currentChord + 1) % chords.length; setTimeout(playAmbientChord, 6000); } playAmbientChord(); }
-        { if (!audioEnabled || !audioCtx) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.6); gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6); osc.connect(gain); gain.connect(sfxGain); osc.start(); osc.stop(audioCtx.currentTime + 0.6); }
         function playSuccessBeep(level) { if (!audioEnabled || !audioCtx) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'square'; const freqs = [880, 1046.50, 1318.51, 1500]; osc.frequency.setValueAtTime(freqs[level-1] || 880, audioCtx.currentTime); gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2); osc.connect(gain); gain.connect(sfxGain); osc.start(); osc.stop(audioCtx.currentTime + 0.2); }
         function playSpacebarProgress() { if (!audioEnabled || !audioCtx) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(440, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15); osc.connect(gain); gain.connect(sfxGain); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
         function playHebrewTTS(text) { if ('speechSynthesis' in window && document.getElementById("voice-toggle").checked) { window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'he-IL'; utterance.rate = 0.85; window.speechSynthesis.speak(utterance); } }
@@ -490,14 +479,6 @@
         simulation.on("tick", () => { linkElements.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y); nodeElements.attr("transform", d => `translate(${d.x},${d.y})`); });
         function updateClock() { gameTimeSeconds++; let m = Math.floor(gameTimeSeconds / 60).toString().padStart(2, '0'); let s = (gameTimeSeconds % 60).toString().padStart(2, '0'); document.getElementById("clock-display").innerText = `${m}:${s}`; }
 
-        // --- SENTENCE BUILDER ---
-        /* const syntaxPanel = document.getElementById("syntax-panel"); let strikeSequence = [];
-        function openSyntaxBuilder() { syntaxPanel.style.display = "block"; const pool = document.getElementById("word-pool"); pool.innerHTML = ""; strikeSequence = []; renderStaging(); activeChallenges.filter(c => c.unlocked).forEach(c => { const chip = document.createElement("div"); chip.className = "word-chip"; chip.innerText = c.targetTranslation; chip.onclick = () => { strikeSequence.push(c); renderStaging(); }; pool.appendChild(chip); }); }
-        document.getElementById("btn-open-syntax").addEventListener("click", () => { document.getElementById("syntax-title").innerText = "SENTENCE BUILDER"; document.getElementById("syntax-title").style.color = "#10b981"; openSyntaxBuilder(); });
-        document.getElementById("btn-close-syntax").addEventListener("click", () => syntaxPanel.style.display = "none");
-        function renderStaging() { const stage = document.getElementById("staging-area"); stage.innerHTML = ""; strikeSequence.forEach((c, idx) => { const span = document.createElement("span"); span.style.color = c.color; span.style.fontWeight = "bold"; span.innerText = c.targetHebrew; span.onclick = () => { strikeSequence.splice(idx, 1); renderStaging(); }; stage.appendChild(span); }); const btnExec = document.getElementById("btn-execute-strike"); btnExec.style.display = strikeSequence.length >= 2 ? "block" : "none"; }
-        document.getElementById("btn-execute-strike").addEventListener("click", () => { if(strikeSequence.length < 2) return; playStrikeAudio(); syntaxPanel.style.display = "none"; const idsToRemove = strikeSequence.map(c => c.targetHebrew); nodesData = nodesData.filter(n => !idsToRemove.includes(n.label)); linksData = linksData.filter(l => { let sId = typeof l.source === 'object' ? l.source.id : l.source; let tId = typeof l.target === 'object' ? l.target.id : l.target; return nodesData.find(n => n.id === sId) && nodesData.find(n => n.id === tId); }); updateGraph(); });
-        */
         // --- DYNAMIC CHEAT SHEET GENERATOR ---
         document.getElementById("cs-mode-select").addEventListener("change", (e) => {
             cheatSheetMode = e.target.value;

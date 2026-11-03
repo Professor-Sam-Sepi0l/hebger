@@ -1,3 +1,10 @@
+/*
+SPDX-License-Identifier: PolyForm-Shield-1.0.0
+License-URL: https://polyformproject.org/licenses/shield/1.0.0
+Required Notice: Copyright (c) 2026 Professor-Sam-Sepi0l (https://github.com/Professor-Sam-Sepi0l/hebger)
+Licensor Line of Business: Hebger / Hebrew Semantic Engine (https://github.com/Professor-Sam-Sepi0l/hebger) — interactive language learning, root-pattern compilation, and linguistic visualization software and games.
+Note: Original schema and compilation are licensed under PolyForm Shield 1.0.0. Underlying Hebrew linguistic facts and any third-party lexical glosses remain subject to their respective rights; see NOTICE.
+*/
 // Database2
 const hebrewDatabase = {
     "ט-ו-ל": {

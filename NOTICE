@@ -1,0 +1,19 @@
+Hebger (Hebrew Semantic Engine)
+SPDX-License-Identifier: PolyForm-Shield-1.0.0
+License: https://polyformproject.org/licenses/shield/1.0.0
+
+Required Notice: Copyright (c) 2026 Professor-Sam-Sepi0l (https://github.com/Professor-Sam-Sepi0l/hebger)
+Licensor Line of Business: Hebger / Hebrew Semantic Engine (https://github.com/Professor-Sam-Sepi0l/hebger) — interactive language learning, root-pattern compilation, and linguistic visualization software and games.
+
+Third-Party Software & Lexical Data Notices
+-------------------------------------------
+
+1. D3.js (v7)
+   Loaded at runtime via https://d3js.org/d3.v7.min.js
+   Copyright 2010-2023 Mike Bostock / Observable, Inc.
+   Licensed under the ISC License (https://opensource.org/licenses/ISC).
+   D3.js is independent third-party software and is not covered by the PolyForm Shield License.
+
+2. Lexical Dataset (database.js)
+   Original dataset selection, schema design, middleware mapping, and structural compilation in this repository are covered by the PolyForm Shield License 1.0.0.
+   Underlying Hebrew linguistic facts (roots and morphological binyanim/mishkalim forms) are uncopyrightable facts of language, and any external or third-party lexical glosses/metadata remain subject to their respective source licenses and rights.
